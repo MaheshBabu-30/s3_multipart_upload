@@ -1,0 +1,182 @@
+{
+  "info": {
+    "_postman_id": "ab7a4796-10e1-4c12-9f79-d20260330xyz",
+    "name": "Hono Multipart Upload API",
+    "description": "API documentation and runnable test collection for the S3/B2 Multipart Upload system. This handles chunked uploads directly to Backblaze B2 and tracks database records mapping to Aiven PostgreSQL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/multipart",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Start Upload Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fileName\": \"holiday_video.mp4\",\n  \"contentType\": \"video/mp4\",\n  \"fileSize\": 12582912,\n  \"type\": \"video\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/start",
+          "host": ["{{baseUrl}}"],
+          "path": ["start"]
+        },
+        "description": "Initializes the B2 multipart session. Returns the `uploadId`, `fileKey`, and mathematical chunk partition calculations."
+      }
+    },
+    {
+      "name": "2. Get Presigned URLs",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"totalParts\": 3\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/urls",
+          "host": ["{{baseUrl}}"],
+          "path": ["urls"]
+        },
+        "description": "Generates temporal secure `PUT` URLs specifically allowing the frontend to upload each chunk."
+      }
+    },
+    {
+      "name": "3. Upload Chunk (Direct to B2)",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "file",
+          "file": {}
+        },
+        "url": {
+          "raw": "https://<paste_presigned_url_here>",
+          "protocol": "https",
+          "host": ["<paste_presigned_url_here>"]
+        },
+        "description": "Frontend completely bypasses the backend and `PUT`s binary chunk data directly into the B2 bucket. The response headers must be checked for the `ETag`."
+      }
+    },
+    {
+      "name": "4. Complete Upload (DB Sync)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"fileName\": \"holiday_video.mp4\",\n  \"fileSize\": 12582912,\n  \"contentType\": \"video/mp4\",\n  \"type\": \"video\",\n  \"parts\": [\n    {\n      \"PartNumber\": 1,\n      \"ETag\": \"\\\"etag_string_from_headers\\\"\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/complete",
+          "host": ["{{baseUrl}}"],
+          "path": ["complete"]
+        },
+        "description": "Provides `ETag` receipts to the API. The API stitches all file chunks inside Backblaze securely, and automatically inserts the fully formed metadata properties into a PostgreSQL table."
+      }
+    },
+    {
+      "name": "5. Get Download Link",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/:id/download",
+          "host": ["{{baseUrl}}"],
+          "path": [":id", "download"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "<paste_database_uuid_here>"
+            }
+          ]
+        },
+        "description": "Generates a 1-hour secure presigned URL that the frontend can use or redirect to, securely pulling private storage from Backblaze utilizing mapping from PostgreSQL."
+      }
+    },
+    {
+      "name": "6. Delete File",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/:id",
+          "host": ["{{baseUrl}}"],
+          "path": [":id"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "<paste_database_uuid_here>"
+            }
+          ]
+        },
+        "description": "Executes an atomic deletion sequence. It successfully drops the binary footprint off of Backblaze before nuking the PostgreSQL database record row completely."
+      }
+    },
+    {
+      "name": "7. Resume Multipart Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"totalParts\": 3\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/resume",
+          "host": ["{{baseUrl}}"],
+          "path": ["resume"]
+        },
+        "description": "Asks the server which parts are already uploaded and gets new presigned URLs for the missing ones."
+      }
+    },
+    {
+      "name": "8. Abort Upload Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/abort",
+          "host": ["{{baseUrl}}"],
+          "path": ["abort"]
+        },
+        "description": "Cancels the multipart upload and deletes any orphaned chunks from the cloud storage to prevent storage leaks."
+      }
+    }
+  ]
+}

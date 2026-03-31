@@ -1,0 +1,28 @@
+{
+  "name": "hono_multipart",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.995.0",
+    "@aws-sdk/s3-request-presigner": "^3.995.0",
+    "@hono/node-server": "^1.19.9",
+    "@hono/zod-validator": "^0.7.6",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.2",
+    "postgres": "^3.4.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "dotenv": "^17.3.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.7.1",
+    "typescript": "^5.8.3"
+  }
+}
