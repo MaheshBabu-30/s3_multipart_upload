@@ -3,14 +3,18 @@ import { z } from "zod";
 export const startMultipartSchema = z.object({
   fileName: z.string().min(1, "fileName is required"),
   contentType: z.string().min(1, "contentType is required"),
-  fileSize: z.number().positive("fileSize must be a positive number"),
+  // fileSize is now optional as the backend doesn't calculate chunks anymore
+  fileSize: z.number().positive("fileSize must be a positive number").optional(),
   type: z.string().min(1, "type (e.g. video, image) is required"),
 });
 
 export const urlsMultipartSchema = z.object({
   uploadId: z.string().min(1, "uploadId is required"),
   fileKey: z.string().min(1, "fileKey is required"),
-  totalParts: z.number().positive("totalParts must be a positive number"),
+  // PILLAR: DoS Protection - Max 1,000 parts per request
+  partsCount: z.number()
+    .positive("partsCount must be a positive number")
+    .max(1000, "Maximum parts limit is 1,000 for security"),
 });
 
 // Using ETag and PartNumber as AWS completed parts require these.
@@ -18,7 +22,7 @@ export const completeMultipartSchema = z.object({
   uploadId: z.string().min(1, "uploadId is required"),
   fileKey: z.string().min(1, "fileKey is required"),
   fileName: z.string().min(1, "fileName is required"),
-  fileSize: z.number().positive("fileSize must be positive"),
+  fileSize: z.number().positive("fileSize must be positive"), // Final confirmation
   contentType: z.string().min(1, "contentType is required"),
   type: z.string().min(1, "type (e.g. video, image) is required"),
   parts: z.array(
@@ -37,7 +41,9 @@ export const abortMultipartSchema = z.object({
 export const resumeMultipartSchema = z.object({
   uploadId: z.string().min(1, "uploadId is required"),
   fileKey: z.string().min(1, "fileKey is required"),
-  totalParts: z.number().positive("totalParts must be a positive number"),
+  partsCount: z.number()
+    .positive("partsCount must be a positive number")
+    .max(1000, "Maximum parts limit is 1,000 for security"),
 });
 
 // Exporting types for potential frontend/backend shared usage

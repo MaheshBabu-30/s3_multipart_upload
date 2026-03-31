@@ -26,16 +26,9 @@ export const PART_SIZE = 5 * 1024 * 1024; // 5MB limit for S3 part sizes
 export class S3Service {
   /**
    * Initializes a multipart upload session.
+   * PILLAR 1: No Backend Math - The server does not calculate chunk sizes.
    */
-  static async startMultipartUpload(fileName: string, contentType: string, fileSize: number, bucketName?: string) {
-    // Dynamic Chunk Sizing: 10,000 part limit for S3.
-    // Minimum 5MB, or whatever size is needed for files > 50GB.
-    const dynamicPartSize = Math.max(
-      5 * 1024 * 1024,
-      Math.ceil(fileSize / 10000)
-    );
-    const totalParts = Math.ceil(fileSize / dynamicPartSize);
-    
+  static async startMultipartUpload(fileName: string, contentType: string, bucketName?: string) {
     // Pillar 3: Use a sanitized UUID for the key to prevent path injection
     const fileExtension = fileName.split('.').pop();
     const fileKey = `uploads/${crypto.randomUUID()}${fileExtension ? `.${fileExtension}` : ''}`;
@@ -51,18 +44,17 @@ export class S3Service {
     return {
       uploadId: response.UploadId!,
       fileKey,
-      partSize: dynamicPartSize,
-      totalParts,
     };
   }
 
   /**
    * Generates presigned URLs for all parts of the file.
+   * PILLAR 5: Parallel Generation - Use Promise.all for high performance.
    */
-  static async generatePresignedUrls(uploadId: string, fileKey: string, totalParts: number, bucketName?: string) {
-    const urls = [];
+  static async generatePresignedUrls(uploadId: string, fileKey: string, partsCount: number, bucketName?: string) {
+    const partNumbers = Array.from({ length: partsCount }, (_, i) => i + 1);
 
-    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+    const urlPromises = partNumbers.map(async (partNumber) => {
       const command = new UploadPartCommand({
         Bucket: bucketName || env.B2_BUCKET_NAME,
         Key: fileKey,
@@ -70,18 +62,18 @@ export class S3Service {
         PartNumber: partNumber,
       });
 
-      // Pillar 3: Lower expiration to 15 minutes (900 seconds)
+      // Pillar 3: URLs must expire in 15 minutes (900 seconds)
       const signedUrl = await getSignedUrl(s3, command, {
         expiresIn: 900, 
       });
 
-      urls.push({
+      return {
         partNumber,
         url: signedUrl,
-      });
-    }
+      };
+    });
 
-    return urls;
+    return await Promise.all(urlPromises);
   }
 
   /**
@@ -158,11 +150,10 @@ export class S3Service {
 
   /**
    * Generates presigned URLs for specific missing parts of the file.
+   * PILLAR 5: Parallel Generation - Use Promise.all for high performance.
    */
   static async generateSpecificPresignedUrls(uploadId: string, fileKey: string, partNumbers: number[], bucketName?: string) {
-    const urls = [];
-
-    for (const partNumber of partNumbers) {
+    const urlPromises = partNumbers.map(async (partNumber) => {
       const command = new UploadPartCommand({
         Bucket: bucketName || env.B2_BUCKET_NAME,
         Key: fileKey,
@@ -174,13 +165,13 @@ export class S3Service {
         expiresIn: 900,
       });
 
-      urls.push({
+      return {
         partNumber,
         url: signedUrl,
-      });
-    }
+      };
+    });
 
-    return urls;
+    return await Promise.all(urlPromises);
   }
 }
 

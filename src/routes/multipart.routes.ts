@@ -22,12 +22,11 @@ multipartRoutes.post(
   zValidator("json", startMultipartSchema),
   async (c) => {
     try {
-      const { fileName, contentType, fileSize, type } = c.req.valid("json");
+      const { fileName, contentType, type } = c.req.valid("json");
 
       const result = await S3Service.startMultipartUpload(
         fileName,
-        contentType,
-        fileSize
+        contentType
       );
 
       return c.json(result);
@@ -46,12 +45,12 @@ multipartRoutes.post(
   zValidator("json", urlsMultipartSchema),
   async (c) => {
     try {
-      const { uploadId, fileKey, totalParts } = c.req.valid("json");
+      const { uploadId, fileKey, partsCount } = c.req.valid("json");
 
       const partsUrls = await S3Service.generatePresignedUrls(
         uploadId,
         fileKey,
-        totalParts
+        partsCount
       );
 
       return c.json({ parts: partsUrls });
@@ -199,7 +198,7 @@ multipartRoutes.post(
   zValidator("json", resumeMultipartSchema),
   async (c) => {
     try {
-      const { uploadId, fileKey, totalParts } = c.req.valid("json");
+      const { uploadId, fileKey, partsCount } = c.req.valid("json");
 
       // 1. Ask B2 what parts are already there
       const uploadedParts = await S3Service.getUploadedParts(uploadId, fileKey);
@@ -207,7 +206,7 @@ multipartRoutes.post(
       const uploadedPartNumbers = uploadedParts.map(p => p.PartNumber!);
       const missingPartNumbers = [];
 
-      for (let i = 1; i <= totalParts; i++) {
+      for (let i = 1; i <= partsCount; i++) {
         if (!uploadedPartNumbers.includes(i)) {
           missingPartNumbers.push(i);
         }
