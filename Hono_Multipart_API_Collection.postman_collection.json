@@ -25,14 +25,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"fileName\": \"holiday_video.mp4\",\n  \"contentType\": \"video/mp4\",\n  \"fileSize\": 12582912,\n  \"type\": \"video\"\n}"
+          "raw": "{\n  \"fileName\": \"holiday_video.mp4\",\n  \"contentType\": \"video/mp4\",\n  \"type\": \"video\"\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/start",
           "host": ["{{baseUrl}}"],
           "path": ["start"]
         },
-        "description": "Initializes the B2 multipart session. Returns the `uploadId`, `fileKey`, and mathematical chunk partition calculations."
+        "description": "Initializes the B2 multipart session. Returns the `uploadId` and `fileKey`."
       }
     },
     {
@@ -47,14 +47,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"totalParts\": 3\n}"
+          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"partsCount\": 3\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/urls",
           "host": ["{{baseUrl}}"],
           "path": ["urls"]
         },
-        "description": "Generates temporal secure `PUT` URLs specifically allowing the frontend to upload each chunk."
+        "description": "Generates temporal secure `PUT` URLs. Parallel generation via Promise.all. Max 1,000 parts."
       }
     },
     {
@@ -146,14 +146,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"totalParts\": 3\n}"
+          "raw": "{\n  \"uploadId\": \"<paste_uploadId_here>\",\n  \"fileKey\": \"<paste_fileKey_here>\",\n  \"partsCount\": 3\n}"
         },
         "url": {
           "raw": "{{baseUrl}}/resume",
           "host": ["{{baseUrl}}"],
           "path": ["resume"]
         },
-        "description": "Asks the server which parts are already uploaded and gets new presigned URLs for the missing ones."
+        "description": "Asks the server which parts are already uploaded and gets new parallel presigned URLs for missing ones."
       }
     },
     {
