@@ -28,8 +28,4 @@ lerna-debug.log*
 .DS_Store
 
 # buildup artifacts
-# drizzle/ (Committing this for Render deployment)
 dist/
-nuke-db.ts
-test-upload.ts
-test-dos.ts
